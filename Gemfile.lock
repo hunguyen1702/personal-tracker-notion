@@ -1,3 +1,10 @@
+GIT
+  remote: git@github.com:easyship/rails-settings-cached.git
+  revision: 848baa6d674ac5de0729173d34dbf9089fa3eef8
+  specs:
+    rails-settings-cached (0.6.5)
+      rails (>= 4.2.0)
+
 GEM
   remote: https://rubygems.org/
   specs:
@@ -190,6 +197,7 @@ DEPENDENCIES
   notion-ruby-client
   pg (~> 1.1)
   rails (~> 7.0.4)
+  rails-settings-cached (~> 0.6.5)!
   tzinfo-data
 
 RUBY VERSION

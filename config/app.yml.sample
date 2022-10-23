@@ -1,0 +1,14 @@
+defaults: &defaults
+  notion:
+    databases:
+      task_definition: ""
+      interval_type: ""
+
+development:
+  <<: *defaults
+
+test:
+  <<: *defaults
+
+production:
+  <<: *defaults

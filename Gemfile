@@ -8,6 +8,7 @@ ruby "3.0.2"
 gem "dotenv-rails"
 gem "notion-ruby-client"
 gem "pg", "~> 1.1"
+gem "rails-settings-cached", "~> 0.6.5", :git => "git@github.com:easyship/rails-settings-cached.git"
 gem "rails", "~> 7.0.4"
 gem "tzinfo-data", platforms: %i[ mingw mswin x64_mingw jruby ]
 
