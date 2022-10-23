@@ -1,14 +1,15 @@
 class IntervalType < ApplicationRecord
   has_many :task_definitions
 
+  validates :name, uniqueness: true
   validate :sample_date_difference
 
   private
 
   def sample_date_difference
-    return if (date_2.blank? && date_3.blank?) ||
-      (date_1 != date_2 && date_2 != date_3 && date_3 != date_1)
+    return if ([date1, date2, date3].compact.blank?) ||
+      (date1 != date2 && date2 != date3 && date3 != date1)
 
-    errors.add(:date_1, :sample_date_must_different)
+    errors.add(:date1, :sample_date_must_different)
   end
 end
