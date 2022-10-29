@@ -4,3 +4,5 @@ notion:
     deadline: "Deadline"
     is_done: "Done?"
     recurring_type: "Repeat"
+  databases:
+    tasks: ""
