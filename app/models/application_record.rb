@@ -1,3 +1,3 @@
-class ApplicationRecord < ActiveRecord::Base
-  primary_abstract_class
+class ApplicationModel
+  include ActiveModel::API
 end

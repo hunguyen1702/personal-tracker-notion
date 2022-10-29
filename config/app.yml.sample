@@ -3,6 +3,11 @@ defaults: &defaults
     databases:
       task_definition: ""
       interval_type: ""
+  field_name_definition:
+    time_mark: ""
+    is_done: ""
+    repeatable_task: ""
+    deadline: ""
 
 development:
   <<: *defaults
