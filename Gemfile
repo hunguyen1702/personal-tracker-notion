@@ -7,8 +7,11 @@ ruby "3.0.2"
 
 gem "config"
 gem "dotenv-rails"
+gem "nest"
 gem "notion-ruby-client"
 gem "rails", "~> 7.0.4"
+gem "sidekiq-cron"
+gem "sidekiq", "~> 6.5"
 gem "tzinfo-data", platforms: %i[ mingw mswin x64_mingw jruby ]
 
 # Use Kredis to get higher-level data types in Redis [https://github.com/rails/kredis]
@@ -29,5 +32,3 @@ group :development do
   # Speed up commands on slow machines / big apps [https://github.com/rails/spring]
   # gem "spring"
 end
-
-gem "sidekiq", "~> 6.5"
