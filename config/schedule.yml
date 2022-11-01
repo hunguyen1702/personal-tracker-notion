@@ -1,5 +1,5 @@
 task_polling:
-  name: "Tasks Polling"
-  class: "TaskPolling"
-  queue: "task_polling"
+  name: "Tasks Update"
+  class: "TaskUpdate"
+  queue: "task_update"
   cron: "0 5 * * *"

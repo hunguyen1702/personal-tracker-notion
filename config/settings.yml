@@ -1,6 +1,7 @@
 notion:
   definition_fields:
     time_mark: "Do on"
+    end_time: "Do on end"
     deadline: "Deadline"
     is_done: "Done?"
     recurring_type: "Repeat"
