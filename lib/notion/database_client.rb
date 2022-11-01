@@ -8,11 +8,12 @@ class Notion::DatabaseClient
     self.database_id = database_id
   end
 
-  def retrieve_pages
+  def retrieve_pages(**search_options)
     query_options = {
       sleep_interval: DEFAULT_SLEEP_TIME,
       max_retries: DEFAULT_MAX_RETRIES,
-      database_id: database_id
+      database_id: database_id,
+      **search_options
     }
     results = []
     client.database_query(query_options) do |page_list|
@@ -27,7 +28,7 @@ class Notion::DatabaseClient
   end
 
   def update_page(page_id, object)
-    client.update_page(page_id, properties: object).present?
+    client.update_page(page_id: page_id, properties: object).present?
   end
 
   def create_page(object)
