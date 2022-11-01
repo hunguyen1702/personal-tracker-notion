@@ -7,7 +7,6 @@ ruby "3.0.2"
 
 gem "config"
 gem "dotenv-rails"
-gem "nest"
 gem "notion-ruby-client"
 gem "rails", "~> 7.0.4"
 gem "sidekiq-cron"
