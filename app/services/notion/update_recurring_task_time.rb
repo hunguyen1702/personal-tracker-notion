@@ -1,4 +1,4 @@
-class Notion::RecurringTask
+class Notion::UpdateRecurringTaskTime
   attr_accessor :task
 
   def initialize(task)
@@ -8,7 +8,9 @@ class Notion::RecurringTask
   def update_task
     db_client = Notion::DatabaseClient.new(Settings.notion.databases.tasks)
     task.time_mark = task.next_time_by_recurring_type
+    return if task.end_time.present? && task.time_mark > task.end_time
+
     task.is_done = false
-    db_client.update_page(task.notion_object_id, task.to_data)
+    db_client.update_page(task.notion_object_id, task.to_data.merge)
   end
 end

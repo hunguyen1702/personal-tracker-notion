@@ -14,9 +14,16 @@ class NotionModel < ApplicationModel
       when "select"
         result[property_name]["select"]["name"] = send(attr_name)
       when "date"
-        result[property_name]["date"]["start"] = send(attr_name).iso8601
+        old_date = result[property_name]["date"]
+        new_date = send(attr_name)&.iso8601
+        next if old_date.blank? && new_date.blank?
+
+        old_date["start"] = new_date
       when "checkbox"
         result[property_name]["checkbox"] = send(attr_name)
+      when "title"
+        result[property_name]["title"][0]["text"]["content"] = send(attr_name).to_s
+        result[property_name]["title"][0]["plain_text"] = send(attr_name).to_s
       else
         next
       end
@@ -69,6 +76,8 @@ class NotionModel < ApplicationModel
           hash[attribute_names_mapping.key("#{attribute_name} end")] = end_time if end_time.present?
         when "checkbox"
           hash[attr_key] = value_obj["checkbox"]
+        when "title"
+          hash[attr_key] = value_obj.dig("title", 0, "plain_text")
         else
           hash[attr_key] = nil
         end

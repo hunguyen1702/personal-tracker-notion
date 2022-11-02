@@ -1,10 +1,12 @@
 class Task < NotionModel
+  attribute :task_name, :string
   attribute :time_mark, :datetime
   attribute :end_time, :datetime
+  attribute :deadline, :datetime
   attribute :is_done, :boolean
   attribute :recurring_type, :string, default: "once"
 
-  validates :time_mark, presence: true
+  validates :time_mark, :task_name, presence: true
   validates :recurring_type, presence: true,
     inclusion: { within: %w[
       daily weekly monthly bi-daily

@@ -1,19 +1,18 @@
 class Notion::TaskPolling
+  DEADLINE_COMMENT_MESSAGE = "Task `%s` is over deadline!!!"
+
   def self.execute
     db_client = Notion::DatabaseClient.new(Settings.notion.databases.tasks)
-    filter_options = {
-      property: Settings.notion.definition_fields.is_done,
-      checkbox: {
-        equals: true
-      }
-    }
-    notion_done_tasks_data = db_client.retrieve_pages(filter: filter_options)
+    notion_done_tasks_data = db_client.retrieve_pages
     tasks = Task.from_data(notion_done_tasks_data)
 
     tasks.each do |task|
-      next if !task.valid? || task.recurring_type == "once"
-
-      Notion::RecurringTask.new(task).update_task
+      if task.is_done && task.valid? && task.recurring_type != "once"
+        Notion::UpdateRecurringTaskTime.new(task).update_task
+      end
+      if !task.is_done && task.deadline.present? && task.deadline <= Time.zone.now
+        db_client.add_comment(task.notion_object_id, DEADLINE_COMMENT_MESSAGE % task.task_name)
+      end
     end
   end
 end
