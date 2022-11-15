@@ -11,6 +11,6 @@ class Notion::UpdateRecurringTaskTime
     return if task.end_time.present? && task.time_mark > task.end_time
 
     task.is_done = false
-    db_client.update_page(task.notion_object_id, task.to_data.merge)
+    db_client.update_page(task.notion_object_id, task.to_data)
   end
 end

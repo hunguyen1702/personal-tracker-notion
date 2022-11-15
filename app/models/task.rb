@@ -7,24 +7,21 @@ class Task < NotionModel
   attribute :recurring_type, :string, default: "once"
 
   validates :time_mark, :task_name, presence: true
-  validates :recurring_type, presence: true,
-    inclusion: { within: %w[
-      daily weekly monthly bi-daily
-      bi-weekly bi-monthly annually once
-    ] }
+  validates :recurring_type, presence: true
 
   def next_time_by_recurring_type
+    time_mark_in_zone = time_mark.in_time_zone
     case recurring_type
     when "daily"
-      time_mark.next_day
+      time_mark_in_zone.next_day
     when "weekly"
-      time_mark.next_week(Date::DAYNAMES[time_mark.wday].downcase.to_sym, same_time: true)
+      time_mark_in_zone.next_week(Date::DAYNAMES[time_mark_in_zone.wday].downcase.to_sym, same_time: true)
     when "monthly"
-      time_mark.next_month
+      time_mark_in_zone.next_month
     when "bi-daily"
-      time_mark.next_day(2)
+      time_mark_in_zone.next_day(2)
     when "bi-weekly"
-      week_day_name = Date::DAYNAMES[time_mark.wday].downcase.to_sym
+      week_day_name = Date::DAYNAMES[time_mark_in_zone.wday].downcase.to_sym
       time_props = { same_time: true }
       time_mark
         .next_week(week_day_name, **time_props)
@@ -34,17 +31,21 @@ class Task < NotionModel
         .next_month
         .next_month
     when "annually"
-      time_mark.next_year
+      time_mark_in_zone.next_year
     when "once"
-      time_mark
+      time_mark_in_zone
     when "weekday"
-      next_time = time_mark.next_day
+      next_time = time_mark_in_zone.next_day
       if next_time.on_weekend?
-        next_time = next_time.next_week(:monday, same_time: true)
+        next_time = next_time.next_week.change(
+          hour: time_mark_in_zone.hour,
+          min: time_mark_in_zone.min,
+          sec: time_mark_in_zone.sec
+        )
       end
       next_time
     when /\Aevery (?<number>\d) days\z/
-      time_mark + $LAST_MATCH_INFO["number"].to_i.days
+      time_mark_in_zone + ($LAST_MATCH_INFO["number"].to_i + 1).days
     else
       nil
     end

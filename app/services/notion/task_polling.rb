@@ -3,7 +3,44 @@ class Notion::TaskPolling
 
   def self.execute
     db_client = Notion::DatabaseClient.new(Settings.notion.databases.tasks)
-    notion_done_tasks_data = db_client.retrieve_pages
+    notion_done_tasks_data = db_client.retrieve_pages(
+      filter: {
+        or: [
+          {
+            and: [
+              {
+                property: Settings.notion.definition_fields.is_done,
+                checkbox: {
+                  equals: true
+                }
+              },
+              {
+                property: Settings.notion.definition_fields.recurring_type,
+                select: {
+                  does_not_equal: "once"
+                }
+              }
+            ]
+          },
+          {
+            and: [
+              {
+                property: Settings.notion.definition_fields.is_done,
+                checkbox: {
+                  equals: false
+                }
+              },
+              {
+                property: Settings.notion.definition_fields.deadline,
+                date: {
+                  is_not_empty: true
+                }
+              }
+            ]
+          }
+        ]
+      }
+    )
     tasks = Task.from_data(notion_done_tasks_data)
 
     tasks.each do |task|
