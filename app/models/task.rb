@@ -37,6 +37,14 @@ class Task < NotionModel
       time_mark.next_year
     when "once"
       time_mark
+    when "weekday"
+      next_time = time_mark.next_day
+      if next_time.on_weekend?
+        next_time = next_time.next_week(:monday, same_time: true)
+      end
+      next_time
+    when /\Aevery (?<number>\d) days\z/
+      time_mark + $LAST_MATCH_INFO["number"].to_i.days
     else
       nil
     end

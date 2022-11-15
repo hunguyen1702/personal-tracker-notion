@@ -1,5 +1,5 @@
 class PersonalSidekiqHandler
-  def call(exception, context_hash)
+  def self.call(exception, context_hash)
     # This will be a chatbot that send to Messenger
   end
 end
