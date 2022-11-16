@@ -20,6 +20,12 @@ class Task < NotionModel
       time_mark_in_zone.next_month
     when "bi-daily"
       time_mark_in_zone.next_day(2)
+    when "bi-daily-on-weekday"
+      next_time = time_mark_in_zone.next_day(2)
+      if next_time.on_weekend?
+        next_time = next_time.next_day(2)
+      end
+      next_time
     when "bi-weekly"
       week_day_name = Date::DAYNAMES[time_mark_in_zone.wday].downcase.to_sym
       time_props = { same_time: true }
