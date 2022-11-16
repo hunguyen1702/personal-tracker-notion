@@ -6,7 +6,7 @@ services:
     restart: always
     volumes:
       - ${PWD}/config/settings.local.yml:/app/config/settings.local.yml
-    entrypoint: ["bundle", "exec", "sidekiq"]
+    entrypoint: ["bundle", "exec", "sidekiq", "-C", "config/sidekiq.yml"]
     env_file:
       - .env.production
     networks:
