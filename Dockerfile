@@ -10,4 +10,7 @@ COPY Gemfile.lock /app
 
 RUN bundle install
 
+RUN cp /usr/share/zoneinfo/Asia/Ho_Chi_Minh /etc/localtime
+RUN echo "Asia/Ho_Chi_Minh" > /etc/timezone
+
 COPY . /app/
