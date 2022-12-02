@@ -10,24 +10,23 @@ class Task < NotionModel
   validates :recurring_type, presence: true
 
   def next_time_by_recurring_type
-    time_mark_in_zone = time_mark.in_time_zone
     case recurring_type
     when "daily"
-      time_mark_in_zone.next_day
+      time_mark.next_day
     when "weekly"
-      time_mark_in_zone.next_week(Date::DAYNAMES[time_mark_in_zone.wday].downcase.to_sym, same_time: true)
+      time_mark.next_week(Date::DAYNAMES[time_mark.wday].downcase.to_sym, same_time: true)
     when "monthly"
-      time_mark_in_zone.next_month
+      time_mark.next_month
     when "bi-daily"
-      time_mark_in_zone.next_day(2)
+      time_mark.next_day(2)
     when "bi-daily-on-weekday"
-      next_time = time_mark_in_zone.next_day(2)
+      next_time = time_mark.next_day(2)
       if next_time.on_weekend?
         next_time = next_time.next_day(2)
       end
       next_time
     when "bi-weekly"
-      week_day_name = Date::DAYNAMES[time_mark_in_zone.wday].downcase.to_sym
+      week_day_name = Date::DAYNAMES[time_mark.wday].downcase.to_sym
       time_props = { same_time: true }
       time_mark
         .next_week(week_day_name, **time_props)
@@ -37,21 +36,21 @@ class Task < NotionModel
         .next_month
         .next_month
     when "annually"
-      time_mark_in_zone.next_year
+      time_mark.next_year
     when "once"
-      time_mark_in_zone
+      time_mark
     when "weekday"
-      next_time = time_mark_in_zone.next_day
+      next_time = time_mark.next_day
       if next_time.on_weekend?
         next_time = next_time.next_week.change(
-          hour: time_mark_in_zone.hour,
-          min: time_mark_in_zone.min,
-          sec: time_mark_in_zone.sec
+          hour: time_mark.hour,
+          min: time_mark.min,
+          sec: time_mark.sec
         )
       end
       next_time
     when /\Aevery (?<number>\d) days\z/
-      time_mark_in_zone + ($LAST_MATCH_INFO["number"].to_i + 1).days
+      time_mark + ($LAST_MATCH_INFO["number"].to_i + 1).days
     else
       nil
     end
