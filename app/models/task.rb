@@ -10,47 +10,59 @@ class Task < NotionModel
   validates :recurring_type, presence: true
 
   def next_time_by_recurring_type
+    next_time_mark = next_recurring_time_of(time_mark)
+    while next_time_mark.beginning_of_day < Time.zone.now.beginning_of_day
+      current_time = next_time_mark
+      next_time_mark = next_recurring_time_of(current_time)
+    end
+
+    next_time_mark
+  end
+
+  private
+
+  def next_recurring_time_of(input_time)
     case recurring_type
     when "daily"
-      time_mark.next_day
+      input_time.next_day
     when "weekly"
-      time_mark.next_week(Date::DAYNAMES[time_mark.wday].downcase.to_sym, same_time: true)
+      input_time.next_week(Date::DAYNAMES[input_time.wday].downcase.to_sym, same_time: true)
     when "monthly"
-      time_mark.next_month
+      input_time.next_month
     when "bi-daily"
-      time_mark.next_day(2)
+      input_time.next_day(2)
     when "bi-daily-on-weekday"
-      next_time = time_mark.next_day(2)
+      next_time = input_time.next_day(2)
       if next_time.on_weekend?
         next_time = next_time.next_day(2)
       end
       next_time
     when "bi-weekly"
-      week_day_name = Date::DAYNAMES[time_mark.wday].downcase.to_sym
+      week_day_name = Date::DAYNAMES[input_time.wday].downcase.to_sym
       time_props = { same_time: true }
-      time_mark
+      input_time
         .next_week(week_day_name, **time_props)
         .next_week(week_day_name, **time_props)
     when "bi-monthly"
-      time_mark
+      input_time
         .next_month
         .next_month
     when "annually"
-      time_mark.next_year
+      input_time.next_year
     when "once"
-      time_mark
+      input_time
     when "weekday"
-      next_time = time_mark.next_day
+      next_time = input_time.next_day
       if next_time.on_weekend?
         next_time = next_time.next_week.change(
-          hour: time_mark.hour,
-          min: time_mark.min,
-          sec: time_mark.sec
+          hour: input_time.hour,
+          min: input_time.min,
+          sec: input_time.sec
         )
       end
       next_time
     when /\Aevery (?<number>\d) days\z/
-      time_mark + ($LAST_MATCH_INFO["number"].to_i + 1).days
+      input_time + ($LAST_MATCH_INFO["number"].to_i + 1).days
     else
       nil
     end
