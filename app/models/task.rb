@@ -61,6 +61,16 @@ class Task < NotionModel
         )
       end
       next_time
+    when "weekend"
+      next_time = input_time.next_day
+      unless next_time.on_weekend?
+        next_time = next_time.next_week(:saturday).change(
+          hour: input_time.hour,
+          min: input_time.min,
+          sec: input_time.sec
+        )
+      end
+      next_time
     when /\Aevery (?<number>\d) days\z/
       input_time + ($LAST_MATCH_INFO["number"].to_i + 1).days
     else
