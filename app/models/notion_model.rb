@@ -15,7 +15,11 @@ class NotionModel < ApplicationModel
         result[property_name]["select"]["name"] = send(attr_name)
       when "date"
         old_date = result[property_name]["date"]
-        new_date = send(attr_name)&.in_time_zone&.iso8601
+        if Settings.mode.skip_time
+          new_date = send(attr_name)&.in_time_zone&.to_date&.iso8601
+        else
+          new_date = send(attr_name)&.in_time_zone&.iso8601
+        end
         next if old_date.blank? && new_date.blank?
 
         old_date["start"] = new_date

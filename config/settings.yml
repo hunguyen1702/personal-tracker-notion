@@ -8,3 +8,5 @@ notion:
     time_mark: "Do on"
   databases:
     tasks: ""
+mode:
+  skip_time:
