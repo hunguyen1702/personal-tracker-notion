@@ -42,12 +42,14 @@ class Notion::TaskPolling
       }
     )
     tasks = Task.from_data(notion_done_tasks_data)
+    current_time = Settings.mode.skip_time ? Time.zone.now.beginning_of_day : Time.zone.now
 
     tasks.each do |task|
       if task.is_done && task.valid? && task.recurring_type != "once"
         Notion::UpdateRecurringTaskTime.new(task).update_task
       end
-      if !task.is_done && task.deadline.present? && task.deadline <= Time.zone.now
+
+      if !task.is_done && task.deadline.present? && task.deadline <= current_time
         db_client.add_comment(task.notion_object_id, DEADLINE_COMMENT_MESSAGE % task.task_name)
       end
     end
