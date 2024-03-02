@@ -73,6 +73,8 @@ class Task < NotionModel
       next_time
     when /\Aevery (?<number>\d) days\z/
       input_time + ($LAST_MATCH_INFO["number"].to_i + 1).days
+    when "yearly"
+      input_time.next_year
     else
       nil
     end
