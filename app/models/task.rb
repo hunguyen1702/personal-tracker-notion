@@ -4,6 +4,7 @@ class Task < NotionModel
   attribute :end_time, :datetime
   attribute :deadline, :datetime
   attribute :is_done, :boolean
+  attribute :remind, :boolean
   attribute :recurring_type, :string, default: "once"
 
   validates :time_mark, :task_name, presence: true
