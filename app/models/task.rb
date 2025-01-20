@@ -37,6 +37,13 @@ class Task < NotionModel
         next_time = next_time.next_day(2)
       end
       next_time
+    when /\A(?<days>(mon|tue|wed|thu|fri|sat|sun)(,(mon|tue|wed|thu|fri|sat|sun))*)\z/i
+      days = $LAST_MATCH_INFO["days"].split(",").map(&:downcase)
+      next_time = input_time.next_day
+      until days.include?(next_time.strftime("%a").downcase) && next_time >= Time.zone.now.beginning_of_day
+        next_time = next_time.next_day
+      end
+      next_time
     when "bi-weekly"
       week_day_name = Date::DAYNAMES[input_time.wday].downcase.to_sym
       time_props = { same_time: true }
