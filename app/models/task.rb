@@ -38,10 +38,12 @@ class Task < NotionModel
         next_time = next_time.next_day(2)
       end
       next_time
-    when /\A(?<days>(mon|tue|wed|thu|fri|sat|sun)(,(mon|tue|wed|thu|fri|sat|sun))*)\z/i
-      days = $LAST_MATCH_INFO["days"].split(",").map(&:downcase)
+    when /\A(?<days>(mon|tue|wed|thu|fri|sat|sun)(-(mon|tue|wed|thu|fri|sat|sun))*)\z/i
+      days = $LAST_MATCH_INFO["days"].split("-").map(&:downcase)
       next_time = input_time.next_day
-      until days.include?(next_time.strftime("%a").downcase) && next_time >= Time.zone.now.beginning_of_day
+      iterate_count = 0
+      until days.include?(next_time.strftime("%a").downcase) && next_time >= Time.zone.now.beginning_of_day && iterate_count < 7
+        iterate_count += 1
         next_time = next_time.next_day
       end
       next_time
