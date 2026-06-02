@@ -99,6 +99,39 @@ def test_update_page(client, httpx_mock):
     assert client.update_page("page-1", {"Name": {"type": "title", "title": []}}) is True
 
 
+def test_create_page(client, httpx_mock):
+    httpx_mock.add_response(
+        method="POST",
+        url="https://api.notion.com/v1/pages",
+        json={"object": "page", "id": "new-page"},
+    )
+    result = client.create_page({"Name": {"type": "title", "title": []}})
+    assert result["id"] == "new-page"
+    sent = httpx_mock.get_request()
+    assert sent.method == "POST"
+    body = sent.read().decode()
+    assert "db-123" in body
+    assert "Name" in body
+
+
+def test_retrieve_page_strips_formula(client, httpx_mock):
+    httpx_mock.add_response(
+        method="GET",
+        url="https://api.notion.com/v1/pages/page-x",
+        json={
+            "id": "page-x",
+            "properties": {
+                "Name": {"type": "title", "title": []},
+                "Computed": {"type": "formula", "formula": {}},
+            },
+        },
+    )
+    page = client.retrieve_page("page-x")
+    assert page["id"] == "page-x"
+    assert "Computed" not in page["properties"]
+    assert "Name" in page["properties"]
+
+
 def test_add_comment(client, httpx_mock):
     httpx_mock.add_response(
         method="POST",

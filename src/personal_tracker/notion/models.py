@@ -35,6 +35,16 @@ class Task:
 
     REQUIRED_ATTRS: ClassVar[tuple[str, ...]] = ("task_name", "time_mark", "recurring_type")
 
+    PROPERTY_TYPES: ClassVar[dict[str, str]] = {
+        "task_name": "title",
+        "time_mark": "date",
+        "end_time": "date",
+        "deadline": "date",
+        "is_done": "checkbox",
+        "remind": "checkbox",
+        "recurring_type": "select",
+    }
+
     def is_valid(self) -> bool:
         if not self.notion_object_id:
             return False
@@ -107,6 +117,18 @@ class Task:
             **attrs,
         )
 
+    @staticmethod
+    def _empty_property(ptype: str) -> dict[str, Any]:
+        if ptype == "title":
+            return {"type": "title", "title": []}
+        if ptype == "date":
+            return {"type": "date", "date": None}
+        if ptype == "checkbox":
+            return {"type": "checkbox", "checkbox": False}
+        if ptype == "select":
+            return {"type": "select", "select": None}
+        return {"type": ptype}
+
     def to_data(
         self,
         attribute_names_mapping: dict[str, str],
@@ -117,6 +139,17 @@ class Task:
         result = copy.deepcopy(self.raw_data)
 
         for attr_name, property_name in attribute_names_mapping.items():
+            if property_name in result:
+                continue
+            ptype = self.PROPERTY_TYPES.get(attr_name)
+            if ptype is None:
+                continue
+            attr_value = getattr(self, attr_name, None)
+            if attr_value is None and ptype != "checkbox":
+                continue
+            result[property_name] = self._empty_property(ptype)
+
+        for attr_name, property_name in attribute_names_mapping.items():
             prop = result.get(property_name)
             if prop is None:
                 continue
@@ -124,9 +157,10 @@ class Task:
             attr_value = getattr(self, attr_name, None)
 
             if ptype == "select":
-                sel = prop.get("select") or {}
-                sel["name"] = attr_value
-                prop["select"] = sel
+                if attr_value is None:
+                    prop["select"] = None
+                else:
+                    prop["select"] = {"name": attr_value}
             elif ptype == "date":
                 old_date = prop.get("date")
                 if isinstance(attr_value, datetime):

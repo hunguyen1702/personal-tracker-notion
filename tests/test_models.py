@@ -85,6 +85,37 @@ def test_is_valid_requires_required_attrs():
     assert task2.is_valid() is True
 
 
+def test_to_data_from_scratch_builds_title_date_select_checkbox():
+    task = Task(
+        notion_object_id="",
+        task_name="New task",
+        time_mark=datetime(2026, 6, 2, 9, 0, tzinfo=TZ),
+        recurring_type="once",
+        is_done=False,
+        remind=True,
+    )
+    out = task.to_data(MAPPING, skip_time=False, tz=TZ)
+    assert out["What to do"]["title"][0]["plain_text"] == "New task"
+    assert out["Do on"]["date"]["start"] == "2026-06-02T09:00:00+07:00"
+    assert out["Repeat"]["select"]["name"] == "once"
+    assert out["Done?"]["checkbox"] is False
+    assert out["Remind"]["checkbox"] is True
+    # Unset optional fields should not appear in the payload.
+    assert "Deadline" not in out
+    assert "Do on end" not in out
+
+
+def test_to_data_from_scratch_skip_time():
+    task = Task(
+        notion_object_id="",
+        task_name="Eat",
+        time_mark=datetime(2026, 6, 2, 9, 0, tzinfo=TZ),
+        recurring_type="once",
+    )
+    out = task.to_data(MAPPING, skip_time=True, tz=TZ)
+    assert out["Do on"]["date"]["start"] == "2026-06-02"
+
+
 @pytest.mark.parametrize("missing_id", [None, ""])
 def test_is_valid_requires_notion_id(missing_id):
     task = Task(

@@ -124,6 +124,28 @@ class DatabaseClient:
 
         return results
 
+    def retrieve_page(self, page_id: str) -> dict[str, Any]:
+        response = self._request("GET", f"/pages/{page_id}")
+        page = response.json()
+        props = page.get("properties") or {}
+        page["properties"] = {
+            name: prop
+            for name, prop in props.items()
+            if (prop or {}).get("type") != "formula"
+        }
+        return page
+
+    def create_page(self, properties: dict[str, Any]) -> dict[str, Any]:
+        response = self._request(
+            "POST",
+            "/pages",
+            json={
+                "parent": {"database_id": self.database_id},
+                "properties": properties,
+            },
+        )
+        return response.json()
+
     def update_page(self, page_id: str, properties: dict[str, Any]) -> bool:
         response = self._request(
             "PATCH",
@@ -131,6 +153,14 @@ class DatabaseClient:
             json={"properties": properties},
         )
         return bool(response.json())
+
+    def archive_page(self, page_id: str) -> dict[str, Any]:
+        response = self._request(
+            "PATCH",
+            f"/pages/{page_id}",
+            json={"archived": True},
+        )
+        return response.json()
 
     def add_comment(self, page_id: str, content: str) -> bool:
         response = self._request(
