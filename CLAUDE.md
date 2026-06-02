@@ -46,5 +46,7 @@ uv run ruff check src tests                        # lint
 - The Notion property names in the database (e.g. `"What to do"`, `"Do on"`) are *not* hardcoded — they're declared in `config/settings.yml` under `notion.definition_fields`. To support a database with different column names, only the YAML needs to change.
 - `Task.is_valid()` requires `task_name`, `time_mark`, and `recurring_type` to be non-empty before recurring advance runs; deadline and reminder checks are looser.
 - All datetimes flowing into Notion are localized to `settings.tz` (default `Asia/Ho_Chi_Minh`). `to_data()` calls `astimezone(tz)` on every datetime field it writes.
+- When `mode.skip_time` is true, the deadline check compares at midnight (a deadline of "today" is treated as overdue all day). When false, a date-only deadline parses as `00:00` of that day, so it counts as overdue the moment that day begins. Same `> current` test, different granularity.
+- The reminder window (`REMINDER_WINDOW = timedelta(minutes=15)` in `task_polling.py:14`) and the HTTP retry policy (`DEFAULT_SLEEP_TIME = 5`, `DEFAULT_MAX_RETRIES = 20` in `client.py:11-12`) are module-level constants — not env vars. To change them, edit the source.
 - Tests use `pytest-httpx` to mock the Notion API and `freezegun` to pin time. Test files mirror the source layout one-to-one (`test_models.py` ↔ `models.py`, etc.).
 - `.env` and `config/settings.local.yml` are gitignored — they're per-machine secrets and overrides, respectively.
