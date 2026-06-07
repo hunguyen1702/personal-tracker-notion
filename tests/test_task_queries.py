@@ -20,7 +20,12 @@ def test_today_filter_uses_local_date():
     # 00:30 UTC == 07:30 ICT, still the same day in ICT.
     now = datetime(2026, 6, 2, 0, 30, tzinfo=ZoneInfo("UTC"))
     f = today_filter(FIELDS, now=now, tz=TZ)
-    assert f == {"property": "Do on", "date": {"equals": "2026-06-02"}}
+    assert f == {
+        "and": [
+            {"property": "Do on", "date": {"on_or_after": "2026-06-02T00:00:00+07:00"}},
+            {"property": "Do on", "date": {"on_or_before": "2026-06-02T23:59:59.999999+07:00"}},
+        ]
+    }
 
 
 def _page(id_: str, name: str) -> dict:

@@ -127,8 +127,11 @@ def test_list_today_dry_run_prints_filter(runner, mock_client):
     result = _invoke(runner, mock_client, ["list-today", "--dry-run"])
     assert result.exit_code == 0
     filt = json.loads(result.output)
-    assert filt["property"] == "Do on"
-    assert "equals" in filt["date"]
+    assert "and" in filt
+    clauses = filt["and"]
+    assert {c["property"] for c in clauses} == {"Do on"}
+    ops = {frozenset(c["date"]) for c in clauses}
+    assert ops == {frozenset({"on_or_after"}), frozenset({"on_or_before"})}
 
 
 def test_list_today_prints_tasks(runner, mock_client):

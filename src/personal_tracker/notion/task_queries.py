@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, time
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -9,10 +9,13 @@ from .models import Task
 
 
 def today_filter(fields: dict[str, str], *, now: datetime, tz: ZoneInfo) -> dict[str, Any]:
-    local_date = now.astimezone(tz).date().isoformat()
+    start = datetime.combine(now.astimezone(tz).date(), time.min, tzinfo=tz)
+    end = datetime.combine(now.astimezone(tz).date(), time.max, tzinfo=tz)
     return {
-        "property": fields["time_mark"],
-        "date": {"equals": local_date},
+        "and": [
+            {"property": fields["time_mark"], "date": {"on_or_after": start.isoformat()}},
+            {"property": fields["time_mark"], "date": {"on_or_before": end.isoformat()}},
+        ]
     }
 
 
