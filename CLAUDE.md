@@ -60,3 +60,20 @@ uv run ruff check src tests                        # lint
 - Tests use `pytest-httpx` to mock the Notion API and `freezegun` to pin time. Test files mirror the source layout one-to-one (`test_models.py` ↔ `models.py`, etc.).
 - `.env` and `config/settings.local.yml` are gitignored — they're per-machine secrets and overrides, respectively.
 - Standalone install path: `uv tool install git+<repo>` → `personal-tracker init` → edit `~/.config/personal-tracker/{settings.yml,.env}`. Packaged defaults at `src/personal_tracker/_defaults/settings.yml` are the silent fallback when no user `settings.yml` is found.
+
+## Release
+
+To ship a new version of the CLI (matters for the `uv tool install git+<repo>` path — the wheel is cached by version, so unchanged versions don't refetch):
+
+```fish
+# 1. Bump version in pyproject.toml (e.g. 0.1.0 → 0.1.1)
+# 2. Commit + push
+git add pyproject.toml src tests
+git commit -m "release: vX.Y.Z"
+git push
+# 3. Reinstall on every machine that runs the CLI
+uv tool uninstall personal-tracker-notion
+uv tool install git+ssh://git@personal.github.com/hunguyen1702/personal-tracker-notion.git
+```
+
+Editable installs (`uv sync` + `uv run personal-tracker` from a clone) don't need reinstall — code is loaded straight from the working tree. Use the release flow above only for machines that consume the tool via `uv tool install`.

@@ -1,6 +1,6 @@
 [project]
 name = "personal-tracker-notion"
-version = "0.1.0"
+version = "0.1.1"
 description = "CLI poller for a Notion task database — handles recurring tasks, deadline reminders, and upcoming task reminders."
 requires-python = ">=3.12"
 dependencies = [
