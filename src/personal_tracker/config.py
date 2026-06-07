@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from importlib import resources
 from pathlib import Path
 from typing import Any
 
@@ -8,8 +9,10 @@ import yaml
 from dotenv import load_dotenv
 
 DEFAULT_TZ = "Asia/Ho_Chi_Minh"
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-CONFIG_DIR = PROJECT_ROOT / "config"
+ENV_CONFIG_DIR = "PERSONAL_TRACKER_CONFIG"
+APP_DIR_NAME = "personal-tracker"
+SETTINGS_FILENAME = "settings.yml"
+LOCAL_SETTINGS_FILENAME = "settings.local.yml"
 
 
 class Settings:
@@ -42,18 +45,64 @@ def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any
     return out
 
 
+def resolve_config_dir() -> Path:
+    """Pick the config directory used when ``config_dir`` isn't passed explicitly.
+
+    Order: ``$PERSONAL_TRACKER_CONFIG`` → ``$CWD/config`` (if it contains
+    settings.yml — keeps the in-repo dev workflow) → ``$XDG_CONFIG_HOME/personal-tracker``
+    → ``~/.config/personal-tracker``.
+    """
+    env_dir = os.environ.get(ENV_CONFIG_DIR)
+    if env_dir:
+        return Path(env_dir).expanduser()
+
+    cwd_config = Path.cwd() / "config"
+    if (cwd_config / SETTINGS_FILENAME).exists():
+        return cwd_config
+
+    xdg = os.environ.get("XDG_CONFIG_HOME")
+    if xdg:
+        return Path(xdg).expanduser() / APP_DIR_NAME
+
+    return Path.home() / ".config" / APP_DIR_NAME
+
+
+def _read_packaged_defaults() -> dict[str, Any]:
+    text = (
+        resources.files("personal_tracker._defaults")
+        .joinpath(SETTINGS_FILENAME)
+        .read_text(encoding="utf-8")
+    )
+    return yaml.safe_load(text) or {}
+
+
+def _load_env_files(config_dir: Path) -> None:
+    candidates = [config_dir / ".env", Path.cwd() / ".env"]
+    seen: set[Path] = set()
+    for path in candidates:
+        try:
+            resolved = path.resolve()
+        except OSError:
+            continue
+        if resolved in seen or not path.exists():
+            seen.add(resolved)
+            continue
+        seen.add(resolved)
+        load_dotenv(path, override=False)
+
+
 def load_settings(config_dir: Path | None = None) -> Settings:
-    load_dotenv(PROJECT_ROOT / ".env", override=False)
+    resolved_dir = config_dir if config_dir is not None else resolve_config_dir()
+    _load_env_files(resolved_dir)
 
-    config_dir = config_dir or CONFIG_DIR
-    base_path = config_dir / "settings.yml"
-    local_path = config_dir / "settings.local.yml"
+    base_path = resolved_dir / SETTINGS_FILENAME
+    local_path = resolved_dir / LOCAL_SETTINGS_FILENAME
 
-    if not base_path.exists():
-        raise FileNotFoundError(f"Missing config file: {base_path}")
-
-    with base_path.open() as f:
-        data = yaml.safe_load(f) or {}
+    if base_path.exists():
+        with base_path.open() as f:
+            data = yaml.safe_load(f) or {}
+    else:
+        data = _read_packaged_defaults()
 
     if local_path.exists():
         with local_path.open() as f:

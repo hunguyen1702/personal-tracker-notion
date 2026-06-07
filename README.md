@@ -15,7 +15,44 @@ The last Ruby version is preserved at git tag `ruby-legacy-final`.
 - Python 3.12+
 - [`uv`](https://docs.astral.sh/uv/) (package manager)
 
-## Setup
+## Install standalone
+
+You don't need to clone the repo to use the CLI. Pick one of:
+
+```fish
+uv tool install git+https://github.com/<your-fork>/personal-tracker-notion
+pipx install git+https://github.com/<your-fork>/personal-tracker-notion
+pip install --user git+https://github.com/<your-fork>/personal-tracker-notion
+```
+
+Then scaffold a user-level config:
+
+```fish
+personal-tracker init
+# writes settings.yml + .env into ~/.config/personal-tracker/
+# (or $XDG_CONFIG_HOME/personal-tracker/, or $PERSONAL_TRACKER_CONFIG)
+```
+
+Edit the two generated files (Notion token in `.env`, database id under `notion.databases.tasks` in `settings.yml`), then:
+
+```fish
+personal-tracker poll --dry-run
+```
+
+### Config resolution order
+
+`personal-tracker` reads its config from the first match of:
+
+1. `$PERSONAL_TRACKER_CONFIG` (explicit override).
+2. `./config/settings.yml` under the current working directory — keeps the in-repo dev workflow.
+3. `$XDG_CONFIG_HOME/personal-tracker/`.
+4. `~/.config/personal-tracker/`.
+
+`.env` is loaded from `<config_dir>/.env` then `./.env`, with `override=False` so shell variables win.
+
+If no `settings.yml` exists in the chosen directory, packaged defaults bundled with the wheel are used.
+
+## Setup (dev, from repo)
 
 ```fish
 uv sync                              # creates .venv and installs deps

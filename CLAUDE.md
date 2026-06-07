@@ -21,6 +21,7 @@ uv sync                                            # install deps
 uv run personal-tracker poll --dry-run             # see intended actions, no API writes
 uv run personal-tracker poll                       # the real run
 uv run personal-tracker -v poll                    # debug logging
+uv run personal-tracker init                       # scaffold settings.yml + .env into user config dir
 uv run personal-tracker add --name X --time ISO    # create a task (supports --dry-run)
 uv run personal-tracker update --id ID --done      # mutate by --id or --name (XOR)
 uv run personal-tracker find --name X              # print task details
@@ -36,7 +37,7 @@ uv run ruff check src tests                        # lint
 
 **Entry point** — `src/personal_tracker/cli.py`. A Click group with subcommands `poll`, `add`, `update`, `find`, `delete`, `list-today`. All share `_require_client` (exits 1 if `NOTION_SECRET_TOKEN` or the tasks database id is missing) and use `DatabaseClient` as a context manager. Lookups by `--id` or `--name` go through `_lookup_task` (XOR-validated).
 
-**Config** — `src/personal_tracker/config.py`. Loads `config/settings.yml`, deep-merges `config/settings.local.yml` on top, then layers env vars (`.env` is loaded by `python-dotenv`, not overriding the shell). The `Settings` object exposes `definition_fields` (Notion property name → internal attribute name) and `databases` (logical name → database id). The `mode.skip_time` flag in settings controls whether date-with-time fields are sent as ISO datetimes or just `YYYY-MM-DD`.
+**Config** — `src/personal_tracker/config.py`. `load_settings()` resolves a config dir via `$PERSONAL_TRACKER_CONFIG` → `./config/` (if it contains `settings.yml`) → `$XDG_CONFIG_HOME/personal-tracker` → `~/.config/personal-tracker`, then reads `settings.yml`, deep-merges `settings.local.yml`, and layers env vars (`.env` is loaded from the config dir then cwd, never overriding the shell). If no `settings.yml` exists, falls back silently to bundled `src/personal_tracker/_defaults/settings.yml` — it does NOT raise on missing user config. The `Settings` object exposes `definition_fields` (Notion property name → internal attribute name), `databases` (logical name → database id), and `skip_time` (controls whether date-with-time fields are sent as ISO datetimes or `YYYY-MM-DD`).
 
 **Notion HTTP client** — `src/personal_tracker/notion/client.py`. Thin wrapper over `httpx.Client` with built-in retry/backoff for `429` and `5xx` (default 5 s sleep, 20 attempts). Three operations: `retrieve_pages` (paginated `POST /databases/{id}/query`, strips `formula` properties since they aren't writable), `update_page` (`PATCH /pages/{id}`), `add_comment` (`POST /comments`).
 
@@ -58,3 +59,4 @@ uv run ruff check src tests                        # lint
 - The reminder window (`REMINDER_WINDOW = timedelta(minutes=15)` in `task_polling.py:14`) and the HTTP retry policy (`DEFAULT_SLEEP_TIME = 5`, `DEFAULT_MAX_RETRIES = 20` in `client.py:11-12`) are module-level constants — not env vars. To change them, edit the source.
 - Tests use `pytest-httpx` to mock the Notion API and `freezegun` to pin time. Test files mirror the source layout one-to-one (`test_models.py` ↔ `models.py`, etc.).
 - `.env` and `config/settings.local.yml` are gitignored — they're per-machine secrets and overrides, respectively.
+- Standalone install path: `uv tool install git+<repo>` → `personal-tracker init` → edit `~/.config/personal-tracker/{settings.yml,.env}`. Packaged defaults at `src/personal_tracker/_defaults/settings.yml` are the silent fallback when no user `settings.yml` is found.

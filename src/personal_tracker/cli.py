@@ -4,17 +4,31 @@ import json
 import logging
 import sys
 from datetime import datetime
+from importlib import resources
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import click
 from dateutil.parser import isoparse
 
-from .config import Settings, load_settings
+from .config import (
+    LOCAL_SETTINGS_FILENAME,
+    SETTINGS_FILENAME,
+    Settings,
+    load_settings,
+    resolve_config_dir,
+)
 from .logging import setup_logging
 from .notion.client import DatabaseClient
 from .notion.models import Task
 from .notion.task_polling import TaskPolling
 from .notion.task_queries import find_task_by_name, today_filter
+
+ENV_TEMPLATE = """\
+# Personal Tracker credentials. Filled by `personal-tracker init`.
+NOTION_SECRET_TOKEN=
+# TZ=Asia/Ho_Chi_Minh
+"""
 
 
 @click.group()
@@ -326,6 +340,61 @@ def list_today(settings: Settings, show_id: bool, dry_run: bool) -> None:
         if show_id:
             line += f"  ({task.notion_object_id})"
         click.echo(line)
+
+
+@main.command()
+@click.option(
+    "--config-dir",
+    "config_dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    default=None,
+    help="Directory to write settings into. Defaults to the resolver order documented in README.",
+)
+@click.option("--force", is_flag=True, help="Overwrite existing settings.yml / .env.")
+def init(config_dir: Path | None, force: bool) -> None:
+    """Scaffold settings.yml + .env into the user config directory."""
+    target = (config_dir or resolve_config_dir()).expanduser()
+    target.mkdir(parents=True, exist_ok=True)
+
+    defaults_text = (
+        resources.files("personal_tracker._defaults")
+        .joinpath(SETTINGS_FILENAME)
+        .read_text(encoding="utf-8")
+    )
+
+    written: list[Path] = []
+    skipped: list[Path] = []
+    for name, content in (
+        (SETTINGS_FILENAME, defaults_text),
+        (".env", ENV_TEMPLATE),
+    ):
+        path = target / name
+        if path.exists() and not force:
+            skipped.append(path)
+            continue
+        path.write_text(content, encoding="utf-8")
+        written.append(path)
+
+    for path in written:
+        click.echo(f"wrote   {path}")
+    for path in skipped:
+        click.echo(f"exists  {path} (use --force to overwrite)")
+
+    local_path = target / LOCAL_SETTINGS_FILENAME
+    if not local_path.exists():
+        click.echo(
+            f"hint    create {local_path} to override per-machine settings "
+            "(e.g. notion.databases.tasks)."
+        )
+
+    click.echo("")
+    click.echo("Next steps:")
+    click.echo(f"  1. Put your Notion integration token in {target / '.env'}")
+    click.echo(
+        f"  2. Set notion.databases.tasks (your DB id) in {target / SETTINGS_FILENAME} "
+        f"or {local_path}"
+    )
+    click.echo("  3. Run: personal-tracker poll --dry-run")
 
 
 if __name__ == "__main__":

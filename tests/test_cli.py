@@ -174,3 +174,36 @@ def test_list_today_empty(runner, mock_client):
     result = _invoke(runner, mock_client, ["list-today"])
     assert result.exit_code == 0
     assert "No tasks" in result.output
+
+
+def test_init_scaffolds_files(runner, tmp_path):
+    target = tmp_path / "cfg"
+    result = runner.invoke(main, ["init", "--config-dir", str(target)])
+    assert result.exit_code == 0, result.output
+    assert (target / "settings.yml").exists()
+    assert (target / ".env").exists()
+    assert "NOTION_SECRET_TOKEN=" in (target / ".env").read_text()
+    assert "What to do" in (target / "settings.yml").read_text()
+
+
+def test_init_does_not_overwrite_without_force(runner, tmp_path):
+    target = tmp_path / "cfg"
+    target.mkdir()
+    (target / "settings.yml").write_text("preserved: true\n")
+    (target / ".env").write_text("NOTION_SECRET_TOKEN=existing\n")
+
+    result = runner.invoke(main, ["init", "--config-dir", str(target)])
+    assert result.exit_code == 0
+    assert (target / "settings.yml").read_text() == "preserved: true\n"
+    assert "existing" in (target / ".env").read_text()
+    assert "exists" in result.output
+
+
+def test_init_force_overwrites(runner, tmp_path):
+    target = tmp_path / "cfg"
+    target.mkdir()
+    (target / "settings.yml").write_text("preserved: true\n")
+
+    result = runner.invoke(main, ["init", "--config-dir", str(target), "--force"])
+    assert result.exit_code == 0
+    assert "What to do" in (target / "settings.yml").read_text()

@@ -1,0 +1,13 @@
+notion:
+  definition_fields:
+    deadline: "Deadline"
+    end_time: "Do on end"
+    is_done: "Done?"
+    recurring_type: "Repeat"
+    task_name: "What to do"
+    time_mark: "Do on"
+    remind: "Remind"
+  databases:
+    tasks: ""
+mode:
+  skip_time: false
