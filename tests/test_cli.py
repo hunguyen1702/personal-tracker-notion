@@ -419,3 +419,67 @@ def test_update_with_icon_dry_run(runner, mock_client):
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
     assert payload["icon"] == {"type": "emoji", "emoji": "🎯"}
+
+
+def test_search_fetches_all_then_filters_client_side(runner, mock_client):
+    mock_client.retrieve_pages.return_value = []
+    result = _invoke(runner, mock_client, ["search", "--query", "read"])
+    assert result.exit_code == 0, result.output
+    mock_client.retrieve_pages.assert_called_once()
+    assert mock_client.retrieve_pages.call_args.kwargs.get("filter") is None
+
+
+def test_search_prints_matches_with_show_id(runner, mock_client):
+    mock_client.retrieve_pages.return_value = [
+        {
+            "id": "p-1",
+            "properties": {
+                "What to do": {"type": "title", "title": [{"plain_text": "Read paper"}]},
+                "Do on": {
+                    "type": "date",
+                    "date": {"start": "2026-06-02T09:00:00+07:00", "end": None},
+                },
+                "Done?": {"type": "checkbox", "checkbox": False},
+                "Repeat": {"type": "select", "select": {"name": "once"}},
+                "Remind": {"type": "checkbox", "checkbox": False},
+            },
+        },
+        {
+            "id": "p-2",
+            "properties": {
+                "What to do": {"type": "title", "title": [{"plain_text": "Read book"}]},
+                "Do on": {
+                    "type": "date",
+                    "date": {"start": "2026-06-01T20:00:00+07:00", "end": None},
+                },
+                "Done?": {"type": "checkbox", "checkbox": True},
+                "Repeat": {"type": "select", "select": {"name": "once"}},
+                "Remind": {"type": "checkbox", "checkbox": False},
+            },
+        },
+    ]
+    result = _invoke(
+        runner, mock_client, ["search", "--query", "read", "--show-id"]
+    )
+    assert result.exit_code == 0, result.output
+    lines = [line for line in result.output.splitlines() if line.strip()]
+    assert lines[0].startswith("[x] 2026-06-01 20:00")
+    assert "Read book" in lines[0]
+    assert "(p-2)" in lines[0]
+    assert lines[1].startswith("[ ] 2026-06-02 09:00")
+    assert "Read paper" in lines[1]
+    assert "(p-1)" in lines[1]
+
+
+def test_search_no_match(runner, mock_client):
+    mock_client.retrieve_pages.return_value = []
+    result = _invoke(runner, mock_client, ["search", "--query", "nothing"])
+    assert result.exit_code == 0
+    assert "No tasks match 'nothing'" in result.output
+
+
+def test_search_empty_query_skips_api_call(runner, mock_client):
+    result = _invoke(runner, mock_client, ["search", "--query", "   "])
+    assert result.exit_code == 0
+    mock_client.retrieve_pages.assert_not_called()
+    assert "No tasks match" in result.output

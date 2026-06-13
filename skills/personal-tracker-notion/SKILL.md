@@ -1,11 +1,11 @@
 ---
 name: personal-tracker-notion
-description: How to use the `personal-tracker` CLI — a Python tool that syncs a Notion task database (recurring tasks, deadline comments, reminders) and exposes commands to add/update/find/delete/list tasks, including setting a page emoji icon and Markdown body content. Use this skill whenever the user mentions `personal-tracker`, wants to manage tasks in their Notion task database from the terminal, asks about adding/updating/finding tasks via CLI, wants to attach page content/notes or an emoji icon to a task, wants to schedule the poller via cron, asks about the `Repeat`/recurring values supported, or needs to install or configure the tool — even if they don't name the CLI explicitly (e.g. "add a task to my tracker", "remind me tomorrow via Notion", "list today's tasks").
+description: How to use the `personal-tracker` CLI — a Python tool that syncs a Notion task database (recurring tasks, deadline comments, reminders) and exposes commands to add/update/find/search/delete/list tasks, including setting a page emoji icon and Markdown body content. Use this skill whenever the user mentions `personal-tracker`, wants to manage tasks in their Notion task database from the terminal, asks about adding/updating/finding/searching tasks via CLI, wants to attach page content/notes or an emoji icon to a task, wants to schedule the poller via cron, asks about the `Repeat`/recurring values supported, or needs to install or configure the tool — even if they don't name the CLI explicitly (e.g. "add a task to my tracker", "search for a task by keyword", "remind me tomorrow via Notion", "list today's tasks").
 ---
 
 # personal-tracker CLI
 
-`personal-tracker` is a Click-based Python CLI that talks to a Notion database of tasks. One process = one action. It is designed to be either driven by a human (`add`, `update`, `find`, `delete`, `list-today`) or scheduled by cron (`poll`).
+`personal-tracker` is a Click-based Python CLI that talks to a Notion database of tasks. One process = one action. It is designed to be either driven by a human (`add`, `update`, `find`, `search`, `delete`, `list-today`) or scheduled by cron (`poll`).
 
 The user invokes it as `personal-tracker <command>` after a global install (e.g. `uv tool install …`), or as `uv run personal-tracker <command>` from inside the repo checkout. Pick whichever form matches the user's environment — don't switch them.
 
@@ -18,6 +18,7 @@ The user invokes it as `personal-tracker <command>` after a global install (e.g.
 | `add` | Create a task. Requires `--name` and `--time`. |
 | `update` | Modify a task by `--id` XOR `--name`. Only the flags passed are changed. |
 | `find` | Print a task's fields, located by `--id` XOR `--name`. |
+| `search` | List tasks by partial title match (`--query`), case- and accent-insensitive. Use when the exact name is unknown. |
 | `delete` | Archive (soft-delete) a task. Prompts unless `--yes`. |
 | `list-today` | Print tasks whose `Do on` is today, sorted by time. |
 
@@ -40,6 +41,7 @@ Don't load everything. Pick the file that matches the user's task:
 ## Hard rules to respect
 
 - **`update`, `find`, `delete` require exactly one of `--id` or `--name`.** Passing both, or neither, raises a `UsageError`. If the user has the page id, prefer it (an exact match); `--name` does a `title.equals` lookup and fails if there's no exact-name match.
+- **When the exact title is unknown, use `search --query` first.** It does a partial, case- and accent-insensitive title match (so `hoc ky thuat` finds `Học các kỹ thuật`) and prints every match. Then feed the resulting id into `find`/`update`/`delete --id`. Don't guess at `--name` exact strings.
 - **Datetimes are ISO 8601.** Naive values (`2026-06-08T09:00`) are localized to `settings.tz` (default `Asia/Ho_Chi_Minh`); aware values (`2026-06-08T09:00+07:00`) are respected as-is. When in doubt, suggest aware ISO strings.
 - **`mode.skip_time: true` drops the time-of-day.** Only `YYYY-MM-DD` is sent to Notion. Reminders within a 15-minute window still depend on a time, so don't enable `skip_time` if reminders matter.
 - **Notion has no hard delete via the API.** `delete` calls `PATCH /pages/{id}` with `archived: true`. Archived pages stop appearing in queries but `find --id` can still retrieve them.

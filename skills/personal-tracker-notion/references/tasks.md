@@ -11,7 +11,7 @@ All examples assume a global install. From a repo checkout, prepend `uv run`.
 
 Passing both, or neither, raises `UsageError`. Prefer `--id` when you have it.
 
-To get an id, run `find --name "..."` once and read the `id:` line, or `list-today --show-id`.
+To get an id, run `find --name "..."` once and read the `id:` line, or `list-today --show-id`. **If you don't know the exact title, use `search` (below) — it does partial, accent-insensitive matching and prints ids.**
 
 ## `add` — create a task
 
@@ -117,6 +117,36 @@ is_done:   False
 
 `-` means the field is unset. `time_mark` is normalized to `settings.tz`.
 
+## `search` — partial title lookup
+
+Use this when you don't know the exact title. `find --name` needs a perfect match; `search` does not.
+
+```fish
+personal-tracker search --query "review"
+personal-tracker search --query "hoc ky thuat" --show-id
+```
+
+| Flag | Notes |
+|---|---|
+| `--query TEXT` | required | Search terms. Split on whitespace; a task matches only if its title contains **every** term. |
+| `--show-id` |  | Append the Notion page id to each line — copy it into `find`/`update`/`delete --id`. |
+
+Matching rules:
+
+- **Case- and accent-insensitive.** `hoc ky thuat` matches `Học các kỹ thuật harness`; `Đ`/`đ` fold to `d` (`don gao` matches `Đón Gạo…`).
+- **All terms required, order-independent.** Terms need not be contiguous — `học thuật` matches `Học các kỹ thuật` because both words appear. A title missing any term is excluded.
+- Output mirrors `list-today` but with a full date prefix, sorted by `Do on`:
+
+```
+[ ] 2026-06-13 22:00  Học các kỹ thuật harness  (37d6c30e-…)
+[x] 2026-06-12 09:00  Review PRs                (1f3b…)
+```
+
+- No match prints `No tasks match '<query>'.` and exits 0.
+- An empty/whitespace-only `--query` returns nothing and makes **no** API call.
+
+Note: `search` fetches the full task list and filters locally (Notion's server-side filter can't ignore accents), so it reads the whole database each call — fine for a personal tracker, but it's not a server-side query like `list-today`.
+
 ## `delete` — archive (soft-delete)
 
 ```fish
@@ -158,6 +188,9 @@ personal-tracker update --name "Standup" --time 2026-06-08T09:30
 
 # "Make this weekly on Tue/Thu"
 personal-tracker update --name "Gym" --recurring tue-thu
+
+# "Find that task about kỹ thuật — I forget the exact name"
+personal-tracker search --query "ky thuat" --show-id
 
 # "Show me what's on today, with ids so I can edit them"
 personal-tracker list-today --show-id
