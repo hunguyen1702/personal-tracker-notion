@@ -139,3 +139,88 @@ def test_add_comment(client, httpx_mock):
         json={"object": "comment", "id": "c-1"},
     )
     assert client.add_comment("page-1", "hello") is True
+
+
+def test_create_page_with_children_and_icon(client, httpx_mock):
+    httpx_mock.add_response(
+        method="POST",
+        url="https://api.notion.com/v1/pages",
+        json={"object": "page", "id": "new-page"},
+    )
+    children = [{"object": "block", "type": "paragraph", "paragraph": {"rich_text": []}}]
+    icon = {"type": "emoji", "emoji": "🎯"}
+    client.create_page(
+        {"Name": {"type": "title", "title": []}},
+        children=children,
+        icon=icon,
+    )
+    body = httpx_mock.get_request().read().decode()
+    assert '"children"' in body
+    assert '"icon"' in body
+    assert "🎯" in body
+
+
+def test_create_page_omits_optional_fields(client, httpx_mock):
+    httpx_mock.add_response(
+        method="POST",
+        url="https://api.notion.com/v1/pages",
+        json={"object": "page", "id": "new-page"},
+    )
+    client.create_page({"Name": {"type": "title", "title": []}})
+    body = httpx_mock.get_request().read().decode()
+    assert '"children"' not in body
+    assert '"icon"' not in body
+
+
+def test_update_page_with_icon_sends_patch(client, httpx_mock):
+    httpx_mock.add_response(
+        method="PATCH",
+        url="https://api.notion.com/v1/pages/page-1",
+        json={"object": "page", "id": "page-1"},
+    )
+    client.update_page("page-1", icon={"type": "emoji", "emoji": "🚀"})
+    body = httpx_mock.get_request().read().decode()
+    assert '"properties"' not in body
+    assert '"icon"' in body
+    assert "🚀" in body
+
+
+def test_update_page_clear_icon_sends_null(client, httpx_mock):
+    httpx_mock.add_response(
+        method="PATCH",
+        url="https://api.notion.com/v1/pages/page-1",
+        json={"object": "page", "id": "page-1"},
+    )
+    client.update_page("page-1", icon=None)
+    body = httpx_mock.get_request().read().decode()
+    assert '"icon":null' in body
+
+
+def test_update_page_default_icon_omits_icon_field(client, httpx_mock):
+    httpx_mock.add_response(
+        method="PATCH",
+        url="https://api.notion.com/v1/pages/page-1",
+        json={"object": "page", "id": "page-1"},
+    )
+    client.update_page("page-1", {"Name": {"type": "title", "title": []}})
+    body = httpx_mock.get_request().read().decode()
+    assert '"properties"' in body
+    assert '"icon"' not in body
+
+
+def test_update_page_default_icon_and_no_properties_noop(client, httpx_mock):
+    assert client.update_page("page-1") is True
+    assert len(httpx_mock.get_requests()) == 0
+
+
+def test_append_block_children(client, httpx_mock):
+    httpx_mock.add_response(
+        method="PATCH",
+        url="https://api.notion.com/v1/blocks/page-1/children",
+        json={"object": "list", "results": []},
+    )
+    blocks = [{"object": "block", "type": "paragraph", "paragraph": {"rich_text": []}}]
+    result = client.append_block_children("page-1", blocks)
+    assert result["object"] == "list"
+    body = httpx_mock.get_request().read().decode()
+    assert '"children"' in body

@@ -30,9 +30,28 @@ Flags:
 | `--recurring VAL` |  | `Repeat` value. Defaults to `once`. See `references/recurring.md`. |
 | `--remind / --no-remind` |  | Default `--no-remind`. Required for reminder comments to fire. |
 | `--done / --no-done` |  | Mark already-done on creation (rare). |
+| `--icon EMOJI` |  | Page emoji icon, e.g. `--icon "🎯"`. |
+| `--content MD` |  | Page body as Markdown. Converted to Notion blocks. |
+| `--content-file PATH` |  | Read page body Markdown from a file. Mutually exclusive with `--content`. |
 | `--dry-run` |  | Print the JSON payload, don't write. |
 
-`--dry-run` output is the literal `properties` object that would be POSTed — useful for diagnosing why a field isn't sticking (e.g. wrong column name in `definition_fields`).
+`--dry-run` output is the JSON the create would POST — `{properties, icon, children}` (the latter two are `null` when not supplied) — useful for diagnosing why a field isn't sticking (e.g. wrong column name in `definition_fields`) or eyeballing the converted blocks.
+
+### Page content & icon
+
+`--content` / `--content-file` take **Markdown** and convert it to Notion blocks. Supported: headings (`#`/`##`/`###`, deeper levels clamp to `heading_3`), paragraphs, bulleted/numbered lists, GFM task lists (`- [ ]` / `- [x]` → Notion to-do), fenced code blocks (with language), block quotes, dividers (`---`), and inline **bold** / *italic* / `code` / [links](url). Images are dropped (Notion needs a separate upload step).
+
+```fish
+# Inline markdown body + emoji
+personal-tracker add --name "Plan sprint" --time 2026-06-14T09:00 \
+  --icon "🎯" --content "## Goals\n- [ ] groom backlog\n- [ ] size stories"
+
+# Body from a file
+personal-tracker add --name "Design doc" --time 2026-06-14T09:00 \
+  --content-file ./notes.md --dry-run
+```
+
+Pass either `--content` or `--content-file`, not both (raises `UsageError`). Empty content adds no blocks.
 
 ## `update` — partial edit
 
@@ -58,9 +77,23 @@ personal-tracker update --name "Standup" --no-remind
 | `--recurring VAL` | New `Repeat`. |
 | `--remind / --no-remind` | Set reminder flag explicitly. |
 | `--done / --no-done` | Set done flag explicitly. |
-| `--dry-run` | Print `{page_id, properties}` instead of writing. |
+| `--icon EMOJI` | Set the page emoji icon. |
+| `--no-icon` | Clear the page icon. Mutually exclusive with `--icon`. |
+| `--content MD` | **Append** Markdown body blocks to the page (never replaces existing content). |
+| `--content-file PATH` | Append body blocks read from a Markdown file. Mutually exclusive with `--content`. |
+| `--dry-run` | Print `{page_id, properties, icon, children}` instead of writing. |
 
 Tip: `update` round-trips the rest of the task verbatim, so unrelated fields are preserved.
+
+Icon is tri-state: omit both flags to leave it untouched, `--icon "✅"` to set, `--no-icon` to clear. Passing both `--icon` and `--no-icon` raises `UsageError`. Content always **appends** — there's no replace; new blocks land at the bottom of the page via `PATCH /blocks/{id}/children`.
+
+```fish
+# Swap the icon and append a section
+personal-tracker update --name "Plan sprint" --icon "✅" --content "## Retro\n- went well: ..."
+
+# Clear the icon
+personal-tracker update --id 1f3b… --no-icon
+```
 
 ## `find` — read
 
@@ -131,4 +164,11 @@ personal-tracker list-today --show-id
 
 # "Did Notion actually accept the recurring change?"
 personal-tracker find --name "Gym"
+
+# "Create a task with an emoji and a checklist body"
+personal-tracker add --name "Trip prep" --time 2026-06-20T08:00 \
+  --icon "🧳" --content "## Packing\n- [ ] passport\n- [ ] charger"
+
+# "Add notes to an existing task and mark it with a checkmark"
+personal-tracker update --name "Trip prep" --icon "✅" --content "Booked the hotel."
 ```

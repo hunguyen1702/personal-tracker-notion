@@ -11,6 +11,8 @@ NOTION_VERSION = "2022-06-28"
 DEFAULT_SLEEP_TIME = 5
 DEFAULT_MAX_RETRIES = 20
 
+_UNSET = object()
+
 log = logging.getLogger("personal_tracker.notion.client")
 
 
@@ -135,24 +137,50 @@ class DatabaseClient:
         }
         return page
 
-    def create_page(self, properties: dict[str, Any]) -> dict[str, Any]:
-        response = self._request(
-            "POST",
-            "/pages",
-            json={
-                "parent": {"database_id": self.database_id},
-                "properties": properties,
-            },
-        )
+    def create_page(
+        self,
+        properties: dict[str, Any],
+        *,
+        children: list[dict[str, Any]] | None = None,
+        icon: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        body: dict[str, Any] = {
+            "parent": {"database_id": self.database_id},
+            "properties": properties,
+        }
+        if children is not None:
+            body["children"] = children
+        if icon is not None:
+            body["icon"] = icon
+        response = self._request("POST", "/pages", json=body)
         return response.json()
 
-    def update_page(self, page_id: str, properties: dict[str, Any]) -> bool:
+    def update_page(
+        self,
+        page_id: str,
+        properties: dict[str, Any] | None = None,
+        *,
+        icon: Any = _UNSET,
+    ) -> bool:
+        body: dict[str, Any] = {}
+        if properties is not None:
+            body["properties"] = properties
+        if icon is not _UNSET:
+            body["icon"] = icon
+        if not body:
+            return True
+        response = self._request("PATCH", f"/pages/{page_id}", json=body)
+        return bool(response.json())
+
+    def append_block_children(
+        self, page_id: str, children: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         response = self._request(
             "PATCH",
-            f"/pages/{page_id}",
-            json={"properties": properties},
+            f"/blocks/{page_id}/children",
+            json={"children": children},
         )
-        return bool(response.json())
+        return response.json()
 
     def archive_page(self, page_id: str) -> dict[str, Any]:
         response = self._request(

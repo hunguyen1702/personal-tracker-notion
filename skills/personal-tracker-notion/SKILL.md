@@ -1,6 +1,6 @@
 ---
 name: personal-tracker-notion
-description: How to use the `personal-tracker` CLI — a Python tool that syncs a Notion task database (recurring tasks, deadline comments, reminders) and exposes commands to add/update/find/delete/list tasks. Use this skill whenever the user mentions `personal-tracker`, wants to manage tasks in their Notion task database from the terminal, asks about adding/updating/finding tasks via CLI, wants to schedule the poller via cron, asks about the `Repeat`/recurring values supported, or needs to install or configure the tool — even if they don't name the CLI explicitly (e.g. "add a task to my tracker", "remind me tomorrow via Notion", "list today's tasks").
+description: How to use the `personal-tracker` CLI — a Python tool that syncs a Notion task database (recurring tasks, deadline comments, reminders) and exposes commands to add/update/find/delete/list tasks, including setting a page emoji icon and Markdown body content. Use this skill whenever the user mentions `personal-tracker`, wants to manage tasks in their Notion task database from the terminal, asks about adding/updating/finding tasks via CLI, wants to attach page content/notes or an emoji icon to a task, wants to schedule the poller via cron, asks about the `Repeat`/recurring values supported, or needs to install or configure the tool — even if they don't name the CLI explicitly (e.g. "add a task to my tracker", "remind me tomorrow via Notion", "list today's tasks").
 ---
 
 # personal-tracker CLI
@@ -44,6 +44,7 @@ Don't load everything. Pick the file that matches the user's task:
 - **`mode.skip_time: true` drops the time-of-day.** Only `YYYY-MM-DD` is sent to Notion. Reminders within a 15-minute window still depend on a time, so don't enable `skip_time` if reminders matter.
 - **Notion has no hard delete via the API.** `delete` calls `PATCH /pages/{id}` with `archived: true`. Archived pages stop appearing in queries but `find --id` can still retrieve them.
 - **`NOTION_SECRET_TOKEN` and `notion.databases.tasks` are mandatory.** Without either, every command except `init` exits with code 1 and a clear log line.
+- **Page content via `--content`/`--content-file` is Markdown, and on `update` it always *appends*.** There is no replace — new blocks are added to the bottom of the page. Icon on `update` is tri-state: `--icon` sets, `--no-icon` clears, omitting both leaves it untouched. `--content`/`--content-file` and `--icon`/`--no-icon` are each mutually exclusive pairs.
 
 ## Quick decision tree
 

@@ -6,6 +6,7 @@ import sys
 from datetime import datetime
 from importlib import resources
 from pathlib import Path
+from typing import Any
 from zoneinfo import ZoneInfo
 
 import click
@@ -19,7 +20,8 @@ from .config import (
     resolve_config_dir,
 )
 from .logging import setup_logging
-from .notion.client import DatabaseClient
+from .notion.blocks import markdown_to_blocks
+from .notion.client import _UNSET, DatabaseClient
 from .notion.models import Task
 from .notion.task_polling import TaskPolling
 from .notion.task_queries import find_task_by_name, today_filter
@@ -99,6 +101,14 @@ def _format_task(task: Task, tz: ZoneInfo) -> str:
     )
 
 
+def _resolve_content(content: str | None, content_file: Path | None) -> str | None:
+    if content and content_file:
+        raise click.UsageError("Use either --content or --content-file, not both.")
+    if content_file:
+        return content_file.read_text(encoding="utf-8")
+    return content
+
+
 @main.command()
 @click.option("--dry-run", is_flag=True, help="Log actions without modifying Notion.")
 @click.pass_obj
@@ -130,6 +140,15 @@ def poll(settings: Settings, dry_run: bool) -> None:
 @click.option("--recurring", default="once", show_default=True, help="Repeat type.")
 @click.option("--remind/--no-remind", default=False, help="Send reminder before time_mark.")
 @click.option("--done/--no-done", default=False, help="Mark task as done on creation.")
+@click.option("--icon", default=None, help="Page emoji icon (e.g. '🎯').")
+@click.option("--content", default=None, help="Inline markdown body for the page.")
+@click.option(
+    "--content-file",
+    "content_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=None,
+    help="Path to a markdown file whose contents become the page body.",
+)
 @click.option("--dry-run", is_flag=True, help="Print payload without creating.")
 @click.pass_obj
 def add(
@@ -141,6 +160,9 @@ def add(
     recurring: str,
     remind: bool,
     done: bool,
+    icon: str | None,
+    content: str | None,
+    content_file: Path | None,
     dry_run: bool,
 ) -> None:
     """Create a new task in the Notion database."""
@@ -164,12 +186,22 @@ def add(
         tz=tz,
     )
 
+    body_md = _resolve_content(content, content_file)
+    children = markdown_to_blocks(body_md) if body_md else None
+    icon_payload = {"type": "emoji", "emoji": icon} if icon else None
+
     if dry_run:
-        click.echo(json.dumps({"properties": payload}, indent=2, default=str))
+        click.echo(
+            json.dumps(
+                {"properties": payload, "icon": icon_payload, "children": children},
+                indent=2,
+                default=str,
+            )
+        )
         return
 
     with DatabaseClient(database_id=database_id, token=token) as client:
-        page = client.create_page(payload)
+        page = client.create_page(payload, children=children, icon=icon_payload)
     log.info("Created task %s (id=%s)", name, page.get("id"))
 
 
@@ -188,6 +220,16 @@ def add(
     help="Toggle reminder flag.",
 )
 @click.option("--done/--no-done", "done", default=None, help="Toggle done flag.")
+@click.option("--icon", "icon", default=None, help="Set page emoji icon (e.g. '🚀').")
+@click.option("--no-icon", "clear_icon", is_flag=True, default=False, help="Clear the page icon.")
+@click.option("--content", default=None, help="Append inline markdown content to the page.")
+@click.option(
+    "--content-file",
+    "content_file",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    default=None,
+    help="Append markdown file content to the page.",
+)
 @click.option("--dry-run", is_flag=True, help="Print payload without updating.")
 @click.pass_obj
 def update(
@@ -201,12 +243,18 @@ def update(
     recurring: str | None,
     remind: bool | None,
     done: bool | None,
+    icon: str | None,
+    clear_icon: bool,
+    content: str | None,
+    content_file: Path | None,
     dry_run: bool,
 ) -> None:
     """Update an existing task — locate it by --id or --name."""
     log = logging.getLogger("personal_tracker")
     if bool(page_id) == bool(lookup_name):
         raise click.UsageError("Provide exactly one of --id or --name.")
+    if icon is not None and clear_icon:
+        raise click.UsageError("Use either --icon or --no-icon, not both.")
 
     database_id, token = _require_client(settings)
     tz = ZoneInfo(settings.tz)
@@ -232,17 +280,34 @@ def update(
 
         payload = task.to_data(fields, skip_time=settings.skip_time, tz=tz)
 
+        body_md = _resolve_content(content, content_file)
+        children = markdown_to_blocks(body_md) if body_md else None
+
+        if clear_icon:
+            icon_arg: Any = None
+        elif icon is not None:
+            icon_arg = {"type": "emoji", "emoji": icon}
+        else:
+            icon_arg = _UNSET
+
         if dry_run:
             click.echo(
                 json.dumps(
-                    {"page_id": task.notion_object_id, "properties": payload},
+                    {
+                        "page_id": task.notion_object_id,
+                        "properties": payload,
+                        "icon": None if icon_arg is _UNSET else icon_arg,
+                        "append_children": children,
+                    },
                     indent=2,
                     default=str,
                 )
             )
             return
 
-        client.update_page(task.notion_object_id, payload)
+        client.update_page(task.notion_object_id, payload, icon=icon_arg)
+        if children:
+            client.append_block_children(task.notion_object_id, children)
     log.info("Updated task %s (id=%s)", task.task_name, task.notion_object_id)
 
 
