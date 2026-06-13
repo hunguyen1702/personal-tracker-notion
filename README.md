@@ -71,6 +71,12 @@ uv run personal-tracker poll               # the real thing
 uv run personal-tracker -v poll            # debug logging
 ```
 
+### Lookup a task
+
+- `find --id <page_id>` / `find --name <exact title>` — print one task's details.
+- `search --query <terms>` — list tasks whose title contains every whitespace-separated term, ignoring case and Vietnamese accents (`hoc ky thuat` finds `Học các kỹ thuật`). Use `--show-id` to copy an id into `find`/`update`/`delete`.
+- `list-today` — print tasks scheduled for today, sorted by time.
+
 ## Schedule via cron
 
 To preserve the old `0 2 * * *` schedule:

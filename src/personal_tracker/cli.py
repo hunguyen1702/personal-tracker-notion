@@ -22,7 +22,7 @@ from .logging import setup_logging
 from .notion.client import DatabaseClient
 from .notion.models import Task
 from .notion.task_polling import TaskPolling
-from .notion.task_queries import find_task_by_name, today_filter
+from .notion.task_queries import find_task_by_name, search_tasks_by_title, today_filter
 
 ENV_TEMPLATE = """\
 # Personal Tracker credentials. Filled by `personal-tracker init`.
@@ -300,6 +300,41 @@ def delete(
 
         client.archive_page(task.notion_object_id)
     log.info("Archived task %s (id=%s)", task.task_name, task.notion_object_id)
+
+
+@main.command()
+@click.option("--query", "query", required=True, help="Substring to search for in task title.")
+@click.option("--show-id", is_flag=True, help="Include Notion page id in output.")
+@click.pass_obj
+def search(settings: Settings, query: str, show_id: bool) -> None:
+    """Search tasks by partial title match (case-insensitive)."""
+    database_id, token = _require_client(settings)
+    tz = ZoneInfo(settings.tz)
+    fields = settings.definition_fields
+
+    with DatabaseClient(database_id=database_id, token=token) as client:
+        tasks = search_tasks_by_title(client, fields, query)
+
+    if not tasks:
+        click.echo(f"No tasks match {query!r}.")
+        return
+
+    def _sort_key(t: Task) -> datetime:
+        tm = t.time_mark or datetime.max
+        return tm if tm.tzinfo else tm.replace(tzinfo=tz)
+
+    tasks.sort(key=_sort_key)
+    for task in tasks:
+        status = "[x]" if task.is_done else "[ ]"
+        when = (
+            task.time_mark.astimezone(tz).strftime("%Y-%m-%d %H:%M")
+            if task.time_mark
+            else "---------- --:--"
+        )
+        line = f"{status} {when}  {task.task_name or '(untitled)'}"
+        if show_id:
+            line += f"  ({task.notion_object_id})"
+        click.echo(line)
 
 
 @main.command("list-today")
